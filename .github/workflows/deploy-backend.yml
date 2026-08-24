@@ -1,0 +1,58 @@
+name: CI/CD Backend - Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+      - ".github/workflows/deploy-backend.yml"
+
+  workflow_dispatch:
+
+jobs:
+  test-build-deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Descargar código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Instalar dependencias
+        working-directory: backend
+        run: npm ci
+
+      - name: Ejecutar pruebas
+        working-directory: backend
+        run: npm test -- --runInBand
+
+      - name: Compilar backend
+        working-directory: backend
+        run: npm run build
+
+      - name: Autenticar en Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+
+      - name: Desplegar en Cloud Run
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@v3
+        with:
+          service: cicd-backend
+          region: us-central1
+          source: ./backend
+          flags: --allow-unauthenticated
+
+      - name: Mostrar URL desplegada
+        run: echo "${{ steps.deploy.outputs.url }}"
