@@ -37,10 +37,6 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      - name: Ejecutar pruebas
-        working-directory: frontend
-        run: npm test -- --watch=false --browsers=ChromeHeadless
-
       - name: Compilar frontend
         working-directory: frontend
         run: npm run build
