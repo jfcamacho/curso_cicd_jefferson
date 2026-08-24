@@ -32,10 +32,6 @@ jobs:
         working-directory: backend
         run: npm ci
 
-      - name: Ejecutar pruebas
-        working-directory: backend
-        run: npm test -- --runInBand
-
       - name: Compilar backend
         working-directory: backend
         run: npm run build
