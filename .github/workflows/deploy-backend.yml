@@ -3,6 +3,7 @@ name: CI/CD Backend - Cloud Run
 on:
   push:
     branches:
+      - qa
       - main
     paths:
       - "backend/**"
@@ -14,10 +15,21 @@ jobs:
   test-build-deploy:
     runs-on: ubuntu-latest
 
+    environment: ${{ github.ref_name == 'main' && 'production' || 'qa' }}
+
+    concurrency:
+      group: backend-${{ github.ref_name }}
+      cancel-in-progress: true
+
     permissions:
       contents: read
 
     steps:
+      - name: Mostrar ambiente
+        run: |
+          echo "Rama: ${{ github.ref_name }}"
+          echo "Ambiente: ${{ github.ref_name == 'main' && 'PRODUCCIÓN' || 'QA' }}"
+
       - name: Descargar código
         uses: actions/checkout@v4
 
@@ -41,14 +53,24 @@ jobs:
         with:
           credentials_json: ${{ secrets.GCP_CREDENTIALS }}
 
-      - name: Desplegar en Cloud Run
-        id: deploy
+      - name: Desplegar backend QA
+        if: github.ref_name == 'qa'
         uses: google-github-actions/deploy-cloudrun@v3
         with:
-          service: cicd-backend
+          service: cicd-backend-qa
           region: us-central1
           source: ./backend
-          flags: --allow-unauthenticated
+          flags: >-
+            --allow-unauthenticated
+            --set-env-vars=APP_ENV=qa
 
-      - name: Mostrar URL desplegada
-        run: echo "${{ steps.deploy.outputs.url }}"
+      - name: Desplegar backend Producción
+        if: github.ref_name == 'main'
+        uses: google-github-actions/deploy-cloudrun@v3
+        with:
+          service: cicd-backend-prod
+          region: us-central1
+          source: ./backend
+          flags: >-
+            --allow-unauthenticated
+            --set-env-vars=APP_ENV=production
