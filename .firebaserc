@@ -1,5 +1,18 @@
 {
   "projects": {
     "default": "curso-cicd-jefferson"
-  }
+  },
+  "targets": {
+    "curso-cicd-jefferson": {
+      "hosting": {
+        "production": [
+          "curso-cicd-jefferson"
+        ],
+        "qa": [
+          "curso-cicd-jefferson-qa"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }

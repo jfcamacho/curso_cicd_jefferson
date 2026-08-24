@@ -3,6 +3,7 @@ name: CI/CD Frontend - Firebase Hosting
 on:
   push:
     branches:
+      - qa
       - main
     paths:
       - "frontend/**"
@@ -16,10 +17,21 @@ jobs:
   test-build-deploy:
     runs-on: ubuntu-latest
 
+    environment: ${{ github.ref_name == 'main' && 'production' || 'qa' }}
+
+    concurrency:
+      group: frontend-${{ github.ref_name }}
+      cancel-in-progress: true
+
     permissions:
       contents: read
 
     steps:
+      - name: Mostrar ambiente
+        run: |
+          echo "Rama: ${{ github.ref_name }}"
+          echo "Ambiente: ${{ github.ref_name == 'main' && 'PRODUCCIÓN' || 'QA' }}"
+
       - name: Descargar código
         uses: actions/checkout@v4
 
@@ -29,9 +41,6 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-
-      - name: Mostrar versión de Node
-        run: node --version
 
       - name: Instalar dependencias
         working-directory: frontend
@@ -46,9 +55,18 @@ jobs:
         with:
           credentials_json: ${{ secrets.GCP_CREDENTIALS }}
 
-      - name: Desplegar en Firebase Hosting
+      - name: Desplegar frontend QA
+        if: github.ref_name == 'qa'
         run: >
           npx firebase-tools@latest deploy
-          --only hosting
+          --only hosting:qa
+          --project "${{ secrets.GCP_PROJECT_ID }}"
+          --non-interactive
+
+      - name: Desplegar frontend Producción
+        if: github.ref_name == 'main'
+        run: >
+          npx firebase-tools@latest deploy
+          --only hosting:production
           --project "${{ secrets.GCP_PROJECT_ID }}"
           --non-interactive
